@@ -84,9 +84,20 @@ def emb_pose_generator(np_left_img, np_depth_ing):
         
     if use_gpu:
         input = input.to(torch.device('cuda:0'))
-    _, _, _ , pose_output = model.forward(input)
+    seg_output, _, _ , pose_output = model.forward(input)
+    seg_pred = seg_output.get_prediction()
+    seg_pred = np.argmax(seg_pred, axis=0).astype(np.uint8)
+
     with torch.no_grad():
-        latent_emb_outputs, abs_pose_outputs, peak_output, _, _ = pose_output.compute_pointclouds_and_poses(min_confidence,is_target = False)
+        latent_emb_outputs, abs_pose_outputs, peak_output, scores, indices = pose_output.compute_pointclouds_and_poses(min_confidence,is_target = False)
+
+    # print(seg_pred)
+    pred_cls_ids = []
+    for indice in indices:
+        pred_cls_ids.append(seg_pred[indice[0], indice[1]])
+    pred_scores = scores
+    print(pred_cls_ids, pred_scores)
+
 
     return ae, latent_emb_outputs, abs_pose_outputs, peak_output, img_vis, depth
 
@@ -95,10 +106,10 @@ def shape_decoder(ae, latent_emb_outputs, abs_pose_outputs, our_k=True):
     if our_k:
         camera_k = np.diag((0,0,0,1))
         camera_k[:3,:3] = np.load("640_480/rgb_k.npy")
-        # camera_k[0,0] = 386.786
-        # camera_k[1,1] = 386.786
-        # camera_k[0,2] = 317.492
-        # camera_k[1,2] = 248.319
+        # camera_k[0,0] = 580#386.786
+        # camera_k[1,1] = 580#386.786
+        # camera_k[0,2] = 320#317.492
+        # camera_k[1,2] = 240#248.319
         # camera_k[2,2] = 1
         print(camera_k)
 
@@ -121,10 +132,13 @@ def shape_decoder(ae, latent_emb_outputs, abs_pose_outputs, our_k=True):
         emb = emb.cuda()
         _, shape_out = ae(None, emb)
         shape_out = shape_out.cpu().detach().numpy()[0]
+        np.save("object"+str(j)+".npy", shape_out)
         rotated_pc, rotated_box, _ = get_gt_pointclouds(abs_pose_outputs[j], shape_out, camera_model = _CAMERA)
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(rotated_pc)
         print("rotated_pc", rotated_pc.shape)
+        np.save("rot_object"+str(j)+".npy", rotated_pc)
+        # np.savetxt("rot_object"+str(j)+".xyz", rotated_pc)
         rotated_pcds.append(pcd)
         pcd.paint_uniform_color((1.0, 0.0, 0.0))
         colors_array.append(pcd.colors)
@@ -133,6 +147,7 @@ def shape_decoder(ae, latent_emb_outputs, abs_pose_outputs, our_k=True):
         mesh_frame = mesh_frame.transform(T)
         rotated_pcds.append(mesh_frame)
         cylinder_segments = line_set_mesh(rotated_box)
+        print(len(cylinder_segments))
         for k in range(len(cylinder_segments)):
             rotated_pcds.append(cylinder_segments[k])
         points_mesh = camera.convert_points_to_homopoints(rotated_pc.T)
@@ -181,7 +196,7 @@ def main(numpy_left_img, numpy_depth_img):
     return
 
 
-img_name = "3"
+img_name = "5"
 numpy_left_img = "640_480/rgb/rgb_" + img_name + ".npy"
 numpy_depth_img = "640_480/depth/depth_" + img_name +".npy"
 

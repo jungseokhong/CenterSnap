@@ -19,7 +19,7 @@ class SegmentationOutput:
 
   # Converters for torch to numpy
   def convert_to_numpy_from_torch(self):
-    self.seg_pred = np.ascontiguousarray(self.seg_pred.cpu().numpy())
+    self.seg_pred = np.ascontiguousarray(self.seg_pred.cpu().detach().numpy()) #######
     self.is_numpy = True
 
   def convert_to_torch_from_numpy(self):
