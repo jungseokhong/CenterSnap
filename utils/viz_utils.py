@@ -552,6 +552,8 @@ def display_gird(img_vis, depth, peaks_vis):
                 axes[i].imshow(images[img_count])
                 img_count+=1
 
+    plt.savefig('my_test.png')
+
 def draw_geometries(geometries):
     graph_objects = []
 
