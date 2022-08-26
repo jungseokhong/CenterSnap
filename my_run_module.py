@@ -20,6 +20,7 @@ from utils.viz_utils import depth2inv, viz_inv_depth
 from utils.transform_utils import get_gt_pointclouds, transform_coordinates_3d, calculate_2d_projections
 from utils.transform_utils import project
 from utils.viz_utils import save_projected_points, draw_bboxes, line_set_mesh, display_gird, draw_geometries, show_projected_points
+import pickle
 
 ## 1. Instantiate CenterSnap Model
 
@@ -86,13 +87,16 @@ def emb_pose_generator(np_left_img, np_depth_ing):
         input = input.to(torch.device('cuda:0'))
     seg_output, _, _ , pose_output = model.forward(input)
     seg_pred = seg_output.get_prediction()
+    print(f"segpred shape {seg_pred.shape}")
     seg_pred = np.argmax(seg_pred, axis=0).astype(np.uint8)
+    print(f"segpred shape {seg_pred.shape}")
 
     with torch.no_grad():
         latent_emb_outputs, abs_pose_outputs, peak_output, scores, indices = pose_output.compute_pointclouds_and_poses(min_confidence,is_target = False)
 
     # print(seg_pred)
     pred_cls_ids = []
+    print(indices)
     for indice in indices:
         pred_cls_ids.append(seg_pred[indice[0], indice[1]])
     pred_scores = scores
@@ -147,7 +151,6 @@ def shape_decoder(ae, latent_emb_outputs, abs_pose_outputs, our_k=True):
         mesh_frame = mesh_frame.transform(T)
         rotated_pcds.append(mesh_frame)
         cylinder_segments = line_set_mesh(rotated_box)
-        print(len(cylinder_segments))
         for k in range(len(cylinder_segments)):
             rotated_pcds.append(cylinder_segments[k])
         points_mesh = camera.convert_points_to_homopoints(rotated_pc.T)
@@ -183,6 +186,28 @@ def project_pcd_2_img(img_vis, points_2d, box_obb, axes):
     plt.savefig('my_projection.png')
     return
 
+
+def decompress_datapoint(cbuf):
+    cctx = zstd.ZstdDecompressor()
+    buf = cctx.decompress(cbuf)
+    x = pickle.loads(buf)
+    return x
+
+
+def _datapoint_path(dataset_path, uid):
+    return f'{dataset_path}/{uid}.pickle.zstd'
+
+def read(dataset_path, uid):
+    path = _datapoint_path(dataset_path, uid)
+    with open(path, 'rb') as fh:
+      dp = decompress_datapoint(fh.read())
+    # TODO: remove this, once old datasets without UID are out of use
+    if not hasattr(dp, 'uid'):
+      dp.uid = self.uid
+    assert dp.uid == self.uid
+    return dp
+
+
 def main(numpy_left_img, numpy_depth_img):
     ae, latent_emb_outputs, abs_pose_outputs, peak_output, img_vis, depth = emb_pose_generator(numpy_left_img, numpy_depth_img)
     ### 2.1 Visualize Peaks output and Depth output
@@ -190,7 +215,7 @@ def main(numpy_left_img, numpy_depth_img):
     ## 2.2 Decode shape from latent embeddings
     rotated_pcds, points_2d, box_obb, axes = shape_decoder(ae, latent_emb_outputs, abs_pose_outputs, our_k=True)
     ## draw pcds
-    draw_geometries(rotated_pcds)
+    # draw_geometries(rotated_pcds)
     ## 2.3 Project 3D Pointclouds and 3D bounding boxes on 2D image
     project_pcd_2_img(img_vis, points_2d, box_obb, axes)
     return
