@@ -70,7 +70,7 @@ def load_depth(depth_path):
 
 ## 2. Perform inference using NOCS Real Subset
 
-def emb_pose_generator(np_left_img, np_depth_ing):
+def emb_pose_generator(numpy_left_img, numpy_depth_img):
 
     left_linear = (np.load(numpy_left_img))
     left_linear = cv2.cvtColor(left_linear, cv2.COLOR_BGR2RGB)
@@ -87,6 +87,10 @@ def emb_pose_generator(np_left_img, np_depth_ing):
         input = input.to(torch.device('cuda:0'))
     seg_output, _, _ , pose_output = model.forward(input)
     seg_pred = seg_output.get_prediction()
+    print(seg_pred[0].shape, seg_pred[0])
+    img = seg_output.get_visualization_img(np.load(numpy_left_img))
+    cv2.imwrite('image.png',img)
+    # cv2.waitKey(0)
     print(f"segpred shape {seg_pred.shape}")
     seg_pred = np.argmax(seg_pred, axis=0).astype(np.uint8)
     print(f"segpred shape {seg_pred.shape}")

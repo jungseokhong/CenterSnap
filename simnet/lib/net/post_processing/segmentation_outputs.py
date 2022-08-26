@@ -29,7 +29,7 @@ class SegmentationOutput:
   def get_visualization_img(self, left_image):
     if not self.is_numpy:
       self.convert_to_numpy_from_torch()
-    return draw_segmentation_mask(left_image, self.seg_pred[0])
+    return draw_segmentation_mask(left_image, self.seg_pred[0]) # (7, 480, 640)
 
   def get_prediction(self):
     if not self.is_numpy:
@@ -53,7 +53,8 @@ class SegmentationOutput:
 def draw_segmentation_mask_gt(color_img, seg_mask, num_classes=5):
   assert len(seg_mask.shape) == 2
   seg_mask = seg_mask.astype(np.uint8)
-  colors = color_stuff.get_panoptic_colors()
+  # colors = color_stuff.get_panoptic_colors()
+  colors = color_stuff.get_unique_colors(num_classes)
   color_img = color_img_to_gray(color_img)
   for ii, color in zip(range(num_classes), colors):
     colored_mask = np.zeros([seg_mask.shape[0], seg_mask.shape[1], 3])
