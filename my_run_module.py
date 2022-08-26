@@ -89,11 +89,9 @@ def emb_pose_generator(numpy_left_img, numpy_depth_img):
     seg_pred = seg_output.get_prediction()
     print(seg_pred[0].shape, seg_pred[0])
     img = seg_output.get_visualization_img(np.load(numpy_left_img))
-    cv2.imwrite('image.png',img)
+    cv2.imwrite('masks.png',img)
     # cv2.waitKey(0)
-    print(f"segpred shape {seg_pred.shape}")
     seg_pred = np.argmax(seg_pred, axis=0).astype(np.uint8)
-    print(f"segpred shape {seg_pred.shape}")
 
     with torch.no_grad():
         latent_emb_outputs, abs_pose_outputs, peak_output, scores, indices = pose_output.compute_pointclouds_and_poses(min_confidence,is_target = False)
@@ -225,9 +223,9 @@ def main(numpy_left_img, numpy_depth_img):
     return
 
 
-img_name = "5"
-numpy_left_img = "640_480/rgb/rgb_" + img_name + ".npy"
-numpy_depth_img = "640_480/depth/depth_" + img_name +".npy"
+img_name = "10"
+numpy_left_img = "640_480/rgb_more/rgb_" + img_name + ".npy"
+numpy_depth_img = "640_480/depth_more/depth_" + img_name +".npy"
 
 main(numpy_left_img, numpy_depth_img)
 
