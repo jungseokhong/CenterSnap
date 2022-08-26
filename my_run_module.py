@@ -21,6 +21,7 @@ from utils.transform_utils import get_gt_pointclouds, transform_coordinates_3d, 
 from utils.transform_utils import project
 from utils.viz_utils import save_projected_points, draw_bboxes, line_set_mesh, display_gird, draw_geometries, show_projected_points
 import pickle
+import zstandard as zstd
 
 ## 1. Instantiate CenterSnap Model
 
@@ -205,8 +206,8 @@ def read(dataset_path, uid):
       dp = decompress_datapoint(fh.read())
     # TODO: remove this, once old datasets without UID are out of use
     if not hasattr(dp, 'uid'):
-      dp.uid = self.uid
-    assert dp.uid == self.uid
+      dp.uid = uid
+    assert dp.uid == uid
     return dp
 
 
@@ -223,9 +224,23 @@ def main(numpy_left_img, numpy_depth_img):
     return
 
 
-img_name = "10"
+img_name = "3"
 numpy_left_img = "640_480/rgb_more/rgb_" + img_name + ".npy"
 numpy_depth_img = "640_480/depth_more/depth_" + img_name +".npy"
 
-main(numpy_left_img, numpy_depth_img)
+# main(numpy_left_img, numpy_depth_img)
 
+### Data extraction from the dataset
+# test_data = read('test', '2AvmqwfHvbpiuhG68xjipa')
+test_data = read('test', '2DmwnekiwnQQ5msHeZDf5X')
+
+print(test_data.stereo.left_color.shape)
+cv2.imwrite('stereo_left.png',test_data.stereo.left_color)
+print(test_data.depth.shape)
+# cv2.imwrite('test_depth.png', img)
+plt.imshow(test_data.depth)
+plt.savefig('test_depth.png')
+print(test_data.segmentation.shape)
+plt.imshow(test_data.segmentation)
+plt.savefig('test_seg.png')
+print(test_data.instance_mask.shape)
